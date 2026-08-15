@@ -1,0 +1,18 @@
+# dsh-tool-vision bundle patch: inserts the tool-vision row over the profile root.
+#
+# All values come from schema defaults. Configure the vision route in YOUR
+# profile's cordis.patch.yml (this bundle layer is applied before the user
+# layer, and a user patch replaces the whole row config), e.g.:
+#
+#   - id: tool-vision
+#     config:
+#       provider: xiaomi
+#       model: mimo-v2.5
+#
+# The provider must be a registered LLM route whose model declares image input
+# (e.g. a provider configured on the web Models page / settings.yaml
+# `llm-pi-ai.providers.<name>` with a model entry whose `input` includes
+# `image`).
+- insert:
+    - id: tool-vision
+      name: 'dsh-tool-vision'

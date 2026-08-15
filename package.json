@@ -1,0 +1,42 @@
+{
+  "name": "dsh-tool-vision",
+  "version": "0.1.1",
+  "description": "DSH plugin: read images through a user-configured vision-capable model when the main model route cannot accept image input",
+  "type": "module",
+  "main": "lib/index.js",
+  "files": [
+    "lib",
+    "cordis.patch.yml"
+  ],
+  "license": "MIT",
+  "author": "pzqian123",
+  "homepage": "https://github.com/pzqian123/dsh-tool-vision#readme",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/pzqian123/dsh-tool-vision.git"
+  },
+  "keywords": [
+    "deepseek-harness",
+    "dsh",
+    "plugin",
+    "bundle",
+    "vision",
+    "image",
+    "multimodal"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  },
+  "peerDependencies": {
+    "@deepseek-ai/cordis": "^4.0.1",
+    "@deepseek-ai/schemastery": "^3.18.1",
+    "@deepseek-ai/dsh-tools": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-llm": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-attachment": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-fs": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-sandbox": "^0.1.0-rc.6",
+    "@deepseek-ai/dsh-system-prompt": "^0.1.0-rc.6"
+  }
+}
