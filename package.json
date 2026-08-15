@@ -1,6 +1,6 @@
 {
   "name": "@pzqian123/dsh-tool-vision",
-  "version": "0.1.1",
+  "version": "0.1.2",
   "description": "DSH plugin: read images through a user-configured vision-capable model when the main model route cannot accept image input",
   "type": "module",
   "main": "lib/index.js",

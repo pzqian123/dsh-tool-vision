@@ -46,7 +46,7 @@ dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # 从本地 tarball 安装
 npm pack
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
 ```
 
 > **装完后需要重启 `dsh web`（或该 profile 的进程）** —— bundle 列表在启动时读取。
@@ -119,6 +119,15 @@ MY_VISION_API_KEY: sk-你的密钥
 - **Add a custom provider** 卡片：填 Provider ID（必须以小写字母开头）、端点、协议、至少一个模型——也可以点 **Fetch available models** 直接从端点拉取模型列表。
 - 注意：页面不编辑模型的 `input` 字段；自定义视觉模型需要在 `settings.yaml` 里补 `input: [text, image]`。
 
+## 小提示
+
+- **配置可以让 agent 干**：不用手改 YAML。在任意 DSH 会话里直接说："安装 dsh-tool-vision，并配置成 xiaomi/mimo-v2.5"（或你有的任何 provider/模型）。agent 会执行 `dsh plugin add`、写入 `tool-vision` 行、并通过凭据服务保存 API key——把 key 在同一句话里告诉它即可，它会写进 `~/.dsh/.credentials.yaml`，不会留在聊天记录里。
+- **安装也可以让 agent 干**：让 agent 按上面的命令执行即可。唯一需要你手动做的是**重启 `dsh web`**（agent 运行在同一个进程里，重启不了自己）；安装/卸载后都需要重启。
+- **改配置免重启**：`tool-vision` 行的配置走 HMR 热生效；只有安装/卸载需要重启。
+- **直接说"读这张图"就行**：不需要手动调工具，主模型需要看图时自己会选 `read_image_vision`。
+- **从小图开始**：先用小图测试（附件上限默认 5MB）；如果视觉模型回答被截断，让它用更窄的 prompt 或调大 `maxTokens`。
+- **密钥别写进 settings.yaml**：密钥在 `~/.dsh/.credentials.yaml`（或环境变量），provider 配置里的 `apiKeyEnv` 只是引用它的名字。
+
 ## 使用
 
 直接让主模型读图即可，例如：
@@ -167,7 +176,7 @@ dsh-tool-vision/
 ```powershell
 npm pack
 dsh plugin --profile web remove @pzqian123/dsh-tool-vision
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
 ```
 
 > 注意：pnpm 对本地目录依赖会建符号链接，运行时依赖会从真实路径解析失败，因此始终用 tarball（或 GitHub/npm）安装。

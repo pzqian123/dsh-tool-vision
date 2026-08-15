@@ -48,7 +48,7 @@ dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # From a local tarball
 npm pack
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
 ```
 
 > **Restart `dsh web` (or the profile's process) after installing** — the bundle list is read at startup.
@@ -121,6 +121,15 @@ Settings → Models covers Layers 1 and 2 with a form instead of YAML:
 - **Add a custom provider** card: enter the Provider ID (must start with a lowercase letter), the endpoint, the protocol, and at least one model — or click **Fetch available models** to pull the list from the endpoint directly.
 - Note: the page does not edit a model's `input` field; for a hand-declared custom vision model, add `input: [text, image]` to `settings.yaml` afterwards.
 
+## Tips
+
+- **Let the agent configure it for you** — you never have to edit YAML by hand. In any DSH session, just say: *"Install dsh-tool-vision and configure it to use xiaomi/mimo-v2.5"* (or any provider/model you have). The agent will run `dsh plugin add`, write the `tool-vision` row, and store the API key through the credentials service. Mention the key in the same message; it goes into `~/.dsh/.credentials.yaml`, not into chat history.
+- **Installation is agent-doable too** — ask the agent to run the install command above. The only step it cannot do for you is **restarting `dsh web`** (it runs inside that process); a restart is needed after install/uninstall.
+- **Config changes are hot-reloaded** — editing the `tool-vision` row needs no restart; only install/uninstall does.
+- **Just say "read this image"** — you never call the tool yourself; the main model picks `read_image_vision` whenever it needs to see an image.
+- **Start small** — test with a small image first (attachment cap defaults to 5 MB). If the vision model's answer is truncated, ask for a narrower prompt or raise `maxTokens`.
+- **Keys never go into `settings.yaml`** — keys live in `~/.dsh/.credentials.yaml` (or an environment variable); the credential name is referenced by `apiKeyEnv` in the provider profile.
+
 ## Usage
 
 Just ask the main model to read an image:
@@ -169,7 +178,7 @@ Iterate locally:
 ```powershell
 npm pack
 dsh plugin --profile web remove @pzqian123/dsh-tool-vision
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
 ```
 
 > Note: pnpm symlinks local-directory dependencies, which breaks runtime resolution — always install from the tarball (or GitHub/npm) rather than a local path.
