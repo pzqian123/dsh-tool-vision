@@ -48,7 +48,7 @@ dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # From a local tarball
 npm pack
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-<version>.tgz
 ```
 
 > **Restart `dsh web` (or the profile's process) after installing** — the bundle list is read at startup.
@@ -128,6 +128,7 @@ Settings → Models covers Layers 1 and 2 with a form instead of YAML:
 - **Config changes are hot-reloaded** — editing the `tool-vision` row needs no restart; only install/uninstall does.
 - **Just say "read this image"** — you never call the tool yourself; the main model picks `read_image_vision` whenever it needs to see an image.
 - **Start small** — test with a small image first (attachment cap defaults to 5 MB). If the vision model's answer is truncated, ask for a narrower prompt or raise `maxTokens`.
+- **Vision-capable main route? No needless forwarding** — when your main model can already receive images, `read_image_vision` refuses and points you to `read_image`, so the image is never redundantly sent to the configured vision provider.
 - **Keys never go into `settings.yaml`** — keys live in `~/.dsh/.credentials.yaml` (or an environment variable); the credential name is referenced by `apiKeyEnv` in the provider profile.
 
 ## Usage
@@ -136,7 +137,12 @@ Just ask the main model to read an image:
 
 > Read D:\images\screenshot.png and tell me, character by character, what text is in it.
 
-The model will call `read_image_vision` with a task-specific prompt. The harness's built-in `read_image` tool coexists in the tool catalog (it refuses when the current route cannot carry images); the system prompt guides the model to prefer `read_image_vision` in that case.
+The model will call `read_image_vision` with a task-specific prompt. The harness's built-in `read_image` tool coexists in the tool catalog; the system prompt and the tools' own behavior keep the two straight.
+
+### Which tool is used, per route
+
+- **Text-only main route** (e.g. `deepseek-v4-flash`): the built-in `read_image` refuses (the route cannot carry images); the model uses `read_image_vision`, which forwards the image to the configured vision model and returns a text description.
+- **Vision-capable main route**: the model reads the image directly with the built-in `read_image`. In this case `read_image_vision` **refuses** — forwarding would be redundant and would ship the image to another provider — with an error pointing back to `read_image`.
 
 ### Tool contract
 
@@ -178,7 +184,7 @@ Iterate locally:
 ```powershell
 npm pack
 dsh plugin --profile web remove @pzqian123/dsh-tool-vision
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-<version>.tgz
 ```
 
 > Note: pnpm symlinks local-directory dependencies, which breaks runtime resolution — always install from the tarball (or GitHub/npm) rather than a local path.

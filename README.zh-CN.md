@@ -46,7 +46,7 @@ dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # 从本地 tarball 安装
 npm pack
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-<version>.tgz
 ```
 
 > **装完后需要重启 `dsh web`（或该 profile 的进程）** —— bundle 列表在启动时读取。
@@ -126,6 +126,7 @@ MY_VISION_API_KEY: sk-你的密钥
 - **改配置免重启**：`tool-vision` 行的配置走 HMR 热生效；只有安装/卸载需要重启。
 - **直接说"读这张图"就行**：不需要手动调工具，主模型需要看图时自己会选 `read_image_vision`。
 - **从小图开始**：先用小图测试（附件上限默认 5MB）；如果视觉模型回答被截断，让它用更窄的 prompt 或调大 `maxTokens`。
+- **主路由支持视觉时不会多余转发**：主模型能直接收图时，`read_image_vision` 会拒绝调用并提示改用内置 `read_image`，图片不会被冗余发送到配置的视觉 provider。
 - **密钥别写进 settings.yaml**：密钥在 `~/.dsh/.credentials.yaml`（或环境变量），provider 配置里的 `apiKeyEnv` 只是引用它的名字。
 
 ## 使用
@@ -134,7 +135,12 @@ MY_VISION_API_KEY: sk-你的密钥
 
 > 读取 D:\images\截图.png，逐字告诉我图中写了什么
 
-模型会调用 `read_image_vision` 并按任务给出 prompt。工具目录中同时存在 harness 自带的 `read_image`（当前路由不支持图像时会拒绝）和本插件的 `read_image_vision`，系统提示会引导模型在无法直接收图时使用后者。
+模型会调用 `read_image_vision` 并按任务给出 prompt。工具目录中同时存在 harness 自带的 `read_image` 和本插件的 `read_image_vision`，系统提示与工具自身行为会把两者分清楚。
+
+### 各路由下用哪个工具
+
+- **纯文本主路由**（如 `deepseek-v4-flash`）：内置 `read_image` 会拒绝（路由无法承载图片）；模型改用 `read_image_vision`，把图片转发给配置的视觉模型并拿回文字描述。
+- **支持视觉的主路由**：模型直接用内置 `read_image` 看图。此时 `read_image_vision` **会拒绝调用**——转发是多余的，还会把图片发到另一个 provider——并报错提示改用 `read_image`。
 
 ### 工具契约
 
@@ -176,7 +182,7 @@ dsh-tool-vision/
 ```powershell
 npm pack
 dsh plugin --profile web remove @pzqian123/dsh-tool-vision
-dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.2.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-<version>.tgz
 ```
 
 > 注意：pnpm 对本地目录依赖会建符号链接，运行时依赖会从真实路径解析失败，因此始终用 tarball（或 GitHub/npm）安装。
