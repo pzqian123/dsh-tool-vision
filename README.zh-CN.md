@@ -38,36 +38,86 @@
 任选其一（下面以 `web` profile 为例，其他 profile 请用 `--profile <name>`）：
 
 ```powershell
-# 从 GitHub 安装（无构建步骤，不需要 allowBuilds）
-dsh plugin --profile web add github:<你的用户名>/dsh-tool-vision
+# 从 npm 安装
+dsh plugin --profile web add @pzqian123/dsh-tool-vision
 
-# 从 npm 安装（如已发布）
-dsh plugin --profile web add dsh-tool-vision
+# 从 GitHub 安装（无构建步骤，不需要 allowBuilds）
+dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # 从本地 tarball 安装
 npm pack
-dsh plugin --profile web add .\dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
 ```
 
 > **装完后需要重启 `dsh web`（或该 profile 的进程）** —— bundle 列表在启动时读取。
 
 ## 配置
 
+配置分**三层**，全部写在你自己的文件里——插件包不携带任何默认值，未配置视觉路由前工具会拒绝调用。
+
+### 第 1 层 — 视觉路由（端点 + 模型）：`settings.yaml`
+
+路由注册在 `~/.dsh/settings.yaml` 的 `llm-pi-ai.providers.<名字>` 下（也可用下面的 Web 模型设置页完成）。
+
+**目录内置路由** — pi-ai 内置目录认识的 provider（如 `xiaomi`、`openai`、`anthropic`）只需填密钥引用名，端点和模型清单自动来自内置目录：
+
+```yaml
+llm-pi-ai:
+  providers:
+    xiaomi:
+      apiKeyEnv: XIAOMI_API_KEY
+```
+
+**自定义 OpenAI 兼容端点** — 手写路由、协议、端点和模型清单。视觉模型的 `input` **必须包含 `image`**，否则工具的能力校验会在图片字节离开本机前直接拒绝调用：
+
+```yaml
+llm-pi-ai:
+  providers:
+    my-vision:
+      displayName: My Vision Gateway
+      apiKeyEnv: MY_VISION_API_KEY
+      api: openai-completions
+      baseURL: https://gateway.example.com/v1
+      models:
+        - id: vision-1
+          name: Vision Model 1
+          contextWindow: 131072
+          maxTokens: 8192
+          input: [text, image]      # ← 视觉模型必须有
+```
+
+### 第 2 层 — API key：`~/.dsh/.credentials.yaml`（或环境变量）
+
+密钥由凭据服务存储，**绝不写进 `settings.yaml`**。第 1 层的 `apiKeyEnv` 引用就是密钥的名字：
+
+```yaml
+MY_VISION_API_KEY: sk-你的密钥
+```
+
+…或者不写文件，直接导出同名环境变量。
+
+### 第 3 层 — 让插件指向该路由：profile 的 `cordis.patch.yml`
+
 在 profile 的用户补丁层（如 `~/.dsh/profiles/web/cordis.patch.yml`）把视觉路由写进 `tool-vision` 行的 config：
 
 ```yaml
 - id: tool-vision
   config:
-    provider: xiaomi
-    model: mimo-v2.5
-    # maxTokens: 1024      # 可选：视觉模型最大输出 token 数（默认 1024）
-    # timeoutMs: 120000    # 可选：单次视觉调用总超时毫秒数（默认 120000）
+    provider: my-vision        # 第 1 层的路由名
+    model: vision-1            # 第 1 层的模型 id
+    # maxTokens: 1024          # 可选：视觉模型最大输出 token 数（默认 1024）
+    # timeoutMs: 120000        # 可选：单次视觉调用总超时毫秒数（默认 120000）
 ```
 
-- `provider`：已注册的 LLM 路由名。内置路由：`deepseek-official`；配置型路由：settings.yaml 里 `llm-pi-ai.providers.<name>` 的名字（Web 模型设置页写入）。
-- `model`：该路由下**声明了图像输入**的模型 id。pi-ai 内置目录里 `xiaomi` 的 `mimo-v2.5` 等可识图；自建模型条目需在其 `input` 中声明 `image`。
-
 配置通过 HMR 热生效，改完无需重启。
+
+### 推荐做法：用 Web 模型设置页
+
+设置 → 模型页可以用表单完成第 1、2 层，比手写 YAML 更省事：
+
+- 选目录内置 provider，只填一个 **API key** 输入框——页面通过凭据服务**只写**存储，并自动为你记录 `apiKeyEnv` 引用（派生名为 `<路由名>_API_KEY`）。
+- **Add a custom provider** 卡片：填 Provider ID（必须以小写字母开头）、端点、协议、至少一个模型——也可以点 **Fetch available models** 直接从端点拉取模型列表。
+- 注意：页面不编辑模型的 `input` 字段；自定义视觉模型需要在 `settings.yaml` 里补 `input: [text, image]`。
 
 ## 使用
 
@@ -108,15 +158,16 @@ dsh-tool-vision/
 ├── package.json       # 声明 dsh.bundle（bundle 清单）
 ├── cordis.patch.yml   # 插入 tool-vision 行的补丁层
 ├── lib/index.js       # 插件实现（纯 ESM，无构建步骤）
-└── README.md
+├── README.md
+└── README.zh-CN.md
 ```
 
 本地迭代：
 
 ```powershell
 npm pack
-dsh plugin --profile web remove dsh-tool-vision
-dsh plugin --profile web add .\dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web remove @pzqian123/dsh-tool-vision
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
 ```
 
 > 注意：pnpm 对本地目录依赖会建符号链接，运行时依赖会从真实路径解析失败，因此始终用 tarball（或 GitHub/npm）安装。

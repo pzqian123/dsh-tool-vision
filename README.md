@@ -40,36 +40,86 @@ The vision model sees **only the image and the prompt** — it has no access to 
 Choose one — the profile commands below use `web` as an example; pass `--profile <name>` for any other profile.
 
 ```powershell
-# From GitHub (no build step, so no allowBuilds is required)
-dsh plugin --profile web add github:<your-name>/dsh-tool-vision
+# From npm
+dsh plugin --profile web add @pzqian123/dsh-tool-vision
 
-# From npm (if published)
-dsh plugin --profile web add dsh-tool-vision
+# From GitHub (no build step, so no allowBuilds is required)
+dsh plugin --profile web add github:pzqian123/dsh-tool-vision
 
 # From a local tarball
 npm pack
-dsh plugin --profile web add .\dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
 ```
 
 > **Restart `dsh web` (or the profile's process) after installing** — the bundle list is read at startup.
 
 ## Configuration
 
+Configuration lives in **three layers**, all in your own files — the package ships no defaults and refuses to call the tool until the vision route is configured.
+
+### Layer 1 — the vision route (endpoint + models): `settings.yaml`
+
+Routes are registered under `llm-pi-ai.providers.<name>` in `~/.dsh/settings.yaml` (or via the Web Models page, see below).
+
+**Catalog route** — if pi-ai ships a catalog for the provider (e.g. `xiaomi`, `openai`, `anthropic`), only the credential reference is needed; endpoint and models come from the built-in catalog:
+
+```yaml
+llm-pi-ai:
+  providers:
+    xiaomi:
+      apiKeyEnv: XIAOMI_API_KEY
+```
+
+**Custom OpenAI-compatible endpoint** — hand-declare the route, its protocol, endpoint, and model list. The vision model's `input` **must include `image`**, or the tool's capability check refuses the call before any bytes leave the machine:
+
+```yaml
+llm-pi-ai:
+  providers:
+    my-vision:
+      displayName: My Vision Gateway
+      apiKeyEnv: MY_VISION_API_KEY
+      api: openai-completions
+      baseURL: https://gateway.example.com/v1
+      models:
+        - id: vision-1
+          name: Vision Model 1
+          contextWindow: 131072
+          maxTokens: 8192
+          input: [text, image]      # ← required for vision
+```
+
+### Layer 2 — the API key: `~/.dsh/.credentials.yaml` (or an environment variable)
+
+Keys are stored by the credentials service, never in `settings.yaml`. The `apiKeyEnv` reference from Layer 1 names the key:
+
+```yaml
+MY_VISION_API_KEY: sk-your-key-here
+```
+
+…or export the same name as an environment variable instead of writing the file.
+
+### Layer 3 — point the plugin at the route: profile `cordis.patch.yml`
+
 Add the vision route to the `tool-vision` row in your profile's patch layer (`~/.dsh/profiles/web/cordis.patch.yml`):
 
 ```yaml
 - id: tool-vision
   config:
-    provider: xiaomi
-    model: mimo-v2.5
-    # maxTokens: 1024      # optional: vision model max output tokens (default 1024)
-    # timeoutMs: 120000    # optional: total timeout per vision call in ms (default 120000)
+    provider: my-vision        # route name from Layer 1
+    model: vision-1            # model id from Layer 1
+    # maxTokens: 1024          # optional: vision model max output tokens (default 1024)
+    # timeoutMs: 120000        # optional: total timeout per vision call in ms (default 120000)
 ```
 
-- `provider`: a registered LLM route name. Built-in: `deepseek-official`; configured routes: names under `llm-pi-ai.providers.<name>` in `settings.yaml` (Web Models page).
-- `model`: a model id under that route that declares image input. For pi-ai built-in catalogs, e.g. `xiaomi`/`mimo-v2.5`; for custom model entries, its `input` must include `image`.
-
 Config changes take effect via HMR — no restart needed.
+
+### Recommended: configure via the Web Models page
+
+Settings → Models covers Layers 1 and 2 with a form instead of YAML:
+
+- Pick a catalog provider and type only the **API key** — the page stores it write-only through the credentials service and records the `apiKeyEnv` reference (derived `<ROUTE>_API_KEY`) for you.
+- **Add a custom provider** card: enter the Provider ID (must start with a lowercase letter), the endpoint, the protocol, and at least one model — or click **Fetch available models** to pull the list from the endpoint directly.
+- Note: the page does not edit a model's `input` field; for a hand-declared custom vision model, add `input: [text, image]` to `settings.yaml` afterwards.
 
 ## Usage
 
@@ -110,15 +160,16 @@ dsh-tool-vision/
 ├── package.json       # declares dsh.bundle (bundle manifest)
 ├── cordis.patch.yml   # the patch layer that inserts the tool-vision row
 ├── lib/index.js       # the plugin implementation (plain ESM, no build step)
-└── README.md
+├── README.md
+└── README.zh-CN.md
 ```
 
 Iterate locally:
 
 ```powershell
 npm pack
-dsh plugin --profile web remove dsh-tool-vision
-dsh plugin --profile web add .\dsh-tool-vision-0.1.1.tgz
+dsh plugin --profile web remove @pzqian123/dsh-tool-vision
+dsh plugin --profile web add .\pzqian123-dsh-tool-vision-0.1.1.tgz
 ```
 
 > Note: pnpm symlinks local-directory dependencies, which breaks runtime resolution — always install from the tarball (or GitHub/npm) rather than a local path.

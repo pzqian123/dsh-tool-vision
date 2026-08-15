@@ -15,4 +15,4 @@
 # `image`).
 - insert:
     - id: tool-vision
-      name: 'dsh-tool-vision'
+      name: '@pzqian123/dsh-tool-vision'
